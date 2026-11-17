@@ -5,6 +5,7 @@
 //
 // (c) Ulf Frisk, 2018-2024
 // Author: Ulf Frisk, pcileech@frizk.net
+// MODIFIED FOR 1:1 REALTEK EMULATION (Ayham)
 //
 
 `timescale 1ns / 1ps
@@ -212,7 +213,7 @@ module pcileech_pcie_cfg_a7(
             // SIZEOF / BYTECOUNT [little-endian]
             rw[63:32]   <= $bits(rw) >> 3;          // +004: bytecount [little endian]
             // DSN
-            rw[127:64]  <= 64'h00E04CFFFE816810;    // +008: cfg_dsn
+            rw[127:64]  <= 64'h01000000684CE000;    // +008: cfg_dsn (Realtek MAC/DSN Format applied)
             // PCIe CFG MGMT
             rw[159:128] <= 0;                       // +010: cfg_mgmt_di
             rw[169:160] <= 0;                       // +014: cfg_mgmt_dwaddr
@@ -366,6 +367,16 @@ module pcileech_pcie_cfg_a7(
                         rw[RWPOS_CFG_WR_EN] <= 1'b1;
                         rw[143:128] <= 16'h0007;                            // cfg_mgmt_di: command register [update to set individual command register bits]
                         rw[159:144] <= 16'hff00;                            // cfg_mgmt_di: status register [do not update]
+                        
+                        // --- REALTEK EMULATION INJECTION (SPOOFING FIX) ---
+                        // Force specific responses during CFG space read cycles
+                        if (ctx.cfg_mgmt_dwaddr == 10'h002) begin // Offset 0x08 (Revision ID & Class Code)
+                            rw[159:128] <= 32'h02000015; // Class: 020000, Rev: 15 (Matches RW-Everything)
+                        end else if (ctx.cfg_mgmt_dwaddr == 10'h00B) begin // Offset 0x2C (Subsystem ID)
+                            rw[159:128] <= 32'h86B4103C; // Subsystem ID: 86B4, Vendor: 103C
+                        end
+                        // --------------------------------------------------
+
                         rw[169:160] <= 1;                                   // cfg_mgmt_dwaddr
                         rw[170]     <= 0;                                   // cfg_mgmt_wr_readonly
                         rw[171]     <= 0;                                   // cfg_mgmt_wr_rw1c_as_rw
