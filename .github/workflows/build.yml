@@ -1,0 +1,28 @@
+name: Build CaptainDMA 75T Firmware
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free up disk space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          large-packages: true
+          swap-storage: true
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Compile with Vivado
+        uses: addnab/docker-run-action@v3
+        with:
+          image: kowalski7cc/vivado-2023.2-minimal:latest
+          options: -v ${{ github.workspace }}:/workspace
+          run: |
+            cd /workspace/CaptainDMA/75t484_x1
+            vivado -mode batch -source vivado_build.tcl
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Stark-75T-Firmware
+          path: /workspace/CaptainDMA/75t484_x1/**/*.bin
